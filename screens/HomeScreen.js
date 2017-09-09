@@ -7,12 +7,22 @@ import {
   Text,
   TouchableOpacity,
   View,
+  CameraRoll,
 } from 'react-native';
+
 import { WebBrowser } from 'expo';
 
 import { MonoText } from '../components/StyledText';
 
+import vision from "react-cloud-vision-api";
+
+import base64 from "base-64";
+
 export default class HomeScreen extends React.Component {
+  state = {
+    imageUri: '',
+    imageLabel: 'Banana',
+  }
   static navigationOptions = {
     header: null,
   };
@@ -46,10 +56,23 @@ export default class HomeScreen extends React.Component {
               </MonoText>
             </View>
 
-            <Text style={styles.getStartedText}>
-              hellloo woorlld! Hi Ivana!
-            </Text>
+            <TouchableOpacity style={styles.button} onPress={this._onPick}>
+              <Text>Choose Photo For Word</Text>
+            </TouchableOpacity>
           </View>
+
+          <View
+          style={{ margin: 5 }}
+          ref={(ref) => this.imageView = ref}>
+          <Image
+            source={{ uri: this.state.imageUri }}
+            style={{height: 300 }}
+          />
+          <Text
+            style={[styles.text, { top: 5 }]}>
+            {this.state.imageLabel}
+          </Text>
+        </View>
 
           <View style={styles.helpContainer}>
             <TouchableOpacity
@@ -76,6 +99,33 @@ export default class HomeScreen extends React.Component {
         </View>
       </View>
     );
+  }
+
+  _onPick = async () => {
+    const {
+      cancelled,
+      uri,
+    } = await Expo.ImagePicker.launchImageLibraryAsync();
+    if (!cancelled) {
+      this.setState({ imageUri: uri });
+      vision.init({auth: 'AIzaSyD_0DuvH0KK7lobg269P76uL2bQsiw-wLI'});
+      const req = new vision.Request({
+        image: new vision.Image({
+          base64: base64(uri),
+        }),
+        features: [
+          new vision.Feature('LABEL_DETECTION', 10),
+        ]
+      })
+      console.log(req);
+
+      vision.annotate(req).then((res) => {
+  // handling response
+      console.log(JSON.stringify(res.responses))
+    }, (e) => {
+      console.log('Error: ', e)
+    })
+    }
   }
 
   _maybeRenderDevelopmentModeWarning() {
@@ -161,6 +211,12 @@ const styles = StyleSheet.create({
     color: 'rgba(96,100,109, 1)',
     lineHeight: 24,
     textAlign: 'center',
+  },
+  button: {
+    borderRadius: 8,
+    padding: 5,
+    margin: 5,
+    backgroundColor: '#ddd',
   },
   tabBarInfoContainer: {
     position: 'absolute',
